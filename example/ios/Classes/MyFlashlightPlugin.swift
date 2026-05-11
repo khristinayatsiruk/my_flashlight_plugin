@@ -10,28 +10,44 @@ public class MyFlashlightPlugin: NSObject, FlutterPlugin {
   }
 
   public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-    if (call.method == "toggleFlashlight") {
+    switch call.method {
+    case "toggleFlashlight":
+      // Отримуємо аргументи з Dart
       guard let args = call.arguments as? [String: Any],
             let isEnabled = args["isEnabled"] as? Bool else {
-        result(FlutterError(code: "INVALID_ARGS", message: "Arguments are missing", details: nil))
+        result(FlutterError(code: "INVALID_ARGUMENTS", 
+                            message: "Expected a boolean for isEnabled", 
+                            details: nil))
         return
       }
       
-      toggleFlash(on: isEnabled)
-      result(nil)
-    } else {
+      let success = toggleFlash(on: isEnabled)
+      if success {
+        result(nil)
+      } else {
+        result(FlutterError(code: "UNAVAILABLE", 
+                            message: "Flashlight not available or broken", 
+                            details: nil))
+      }
+      
+    default:
       result(FlutterMethodNotImplemented)
     }
   }
 
-  private func toggleFlash(on: Bool) {
-    guard let device = AVCaptureDevice.default(for: .video), device.hasTorch else { return }
+  private func toggleFlash(on: Bool) -> Bool {
+    // Перевіряємо наявність камери та спалаху
+    guard let device = AVCaptureDevice.default(for: .video), device.hasTorch else {
+      return false
+    }
+    
     do {
       try device.lockForConfiguration()
       device.torchMode = on ? .on : .off
       device.unlockForConfiguration()
+      return true
     } catch {
-      print("Flashlight could not be used")
+      return false
     }
   }
 }
